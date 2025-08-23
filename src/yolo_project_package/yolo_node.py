@@ -1,57 +1,87 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge # ROS 이미지 메시지와 OpenCV 이미지 사이의 변환을 도와줌
+from cv_bridge import CvBridge
 import cv2
 from ultralytics import YOLO
 from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 import os
+from vision_msgs.msg import Detection2DArray,Detection2D,BoundingBox2D,ObjectHypothesisWithPose
 
-pt_path='../weights/yolov8n.pt'
+# BoundingBox2D : 2차원 이미지에서 검출된 사각형 영역을 정의하는 메시지
+# ObjectHypothesisWithPose : 검출된 객체의 클래스와 신뢰도, 필요시 위치를 담는 메시지
 
-class YoloNode(Node):
+pt_path='weights/yolov8n.pt'
+engine_path='weights/yolov8n.engine'
+
+class YoloTestNode(Node):
     def __init__(self):
-        super().__init__('yolo_pt_node')
+        super().__init__('yolo_test_node')
 
-        self.model=YOLO(pt_path)
-        
+        if not os.path.exists(engine_path):
+            model_builder=YOLO(pt_path)
+            model_builder.export(format='engine',half=True,imgsz=640,device=0)
+            
+        self.model=YOLO(engine_path,task='detect')
         self.bridge=CvBridge()
-        # ROS2의 표준 이미지 메시지 형식은 opencv가 바로 처리할 수 없기 때문에 이 둘 사이의 데이터 형식을 변환해주는 역할
 
-        qos_profile=QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT, # 신뢰성보다 최신 데이터 전송을 우선 (한두 프레임 정도 유실되어도 괜찮지만, 지연이 없어야 하는 경우), (기본값은 RELIABLE로 모든 메시지를 반드시 전송해야 할 때 사용)
-            history=QoSHistoryPolicy.KEEP_LAST, depth=1 # 버퍼에 몇 개의 메시지를 저장할지 설정 (여기서는 가장 최신 메시지 1개만 유지)
-        )
+        qos_profile=QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT,history=QoSHistoryPolicy.KEEP_LAST,depth=1)
 
-        self.subscription=self.create_subscription(Image,'/camera/camera/color/image_raw',self.image_callback,10)
-
-        self.publisher=self.create_publisher(Image,'/yolo/annotated_image',10)
+        self.subscription=self.create_subscription(Image,'/camera/camera/color/image_raw',self.image_callback,qos_profile)
+        self.detection_publisher=self.create_publisher(Detection2DArray,'/yolo/detections',10)
 
     def image_callback(self,msg):
         try:
-            # ROS 메시지 -> opencv 이미지 변환
             cv_image=self.bridge.imgmsg_to_cv2(msg,'bgr8')
+            results=self.model(cv_image,verbose=False)
 
-            # YOLO 추론 수행
-            results=self.model(cv_image,verbose=False,half=True,imgsz=640) # half=True로 FP16을 사용하여 모델의 정밀도를 약간 낮추고 추론 속도를 크게 높임
-
-            # 결과 시각화
             annotated_frame=results[0].plot()
+            cv2.imshow("YOLO_Realsense_ROS",annotated_frame)
+            cv2.waitKey(1)
 
-            # opencv 이미지 -> ROS 메시지 변환 및 퍼블리시
-            annotated_msg=self.bridge.cv2_to_imgmsg(annotated_frame,'bgr8')
-            annotated_msg.header.stamp=self.get_clock().now().to_msg()
-            self.publisher.publish(annotated_msg)
+            detections_msg=Detection2DArray()
+            detections_msg.header=msg.header
+            for box in results[0].boxes:
+                # boxes가 가진 정보
+                # xyxy : 왼쪽 위, 오른쪽 아래 좌표
+                # xywh : 중심좌표(x,y), width, height
+                # xywhn : 중심좌표, width, height를 정규환된 값(0~1)으로
+                # cls : 클래스 ID
+                # conf : 신뢰도
+                detection=Detection2D()
+                x_center,y_center,width,height=box.xywhn[0]
 
+                # yolo 결과를 ROS 메시지 형식으로 변환
+                bbox=BoundingBox2D()
+                bbox.center.position.x=float(x_center)
+                bbox.center.position.y=float(y_center)
+                bbox.size_x=float(width)
+                bbox.size_y=float(height)
+                detection.bbox=bbox
+
+                hypothesis=ObjectHypothesisWithPose()
+                hypothesis.hypothesis.class_id=str(int(box.cls))
+                hypothesis.hypothesis.score=float(box.conf)
+                detection.results.append(hypothesis)
+
+                detections_msg.detections.append(detection)
+
+            self.detection_publisher.publish(detections_msg)
         except Exception as e:
             self.get_logger().error(f'Error in image_callback: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
-    yolo_test_node=YoloNode()
-    rclpy.spin(yolo_test_node)
-    yolo_test_node.destroy_node()
-    rclpy.shutdown()
+    yolo_node=YoloTestNode()
+
+    try:
+        rclpy.spin(yolo_node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        yolo_node.destroy_node()
+        rclpy.shutdown()
+        cv2.destroyAllWindows()
 
 if __name__=='__main__':
     main()
