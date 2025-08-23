@@ -2,9 +2,12 @@ import cv2
 import numpy as np
 import pyrealsense2 as rs
 from ultralytics import YOLO
+import os
+
+pt_path='../weights/yolov8n.pt'
 
 def main():
-    model=YOLO("yolov8n.pt")
+    model=YOLO(pt_path)
 
     # Realsense 파이프라인 및 설정 객체 생성
     pipeline=rs.pipeline()

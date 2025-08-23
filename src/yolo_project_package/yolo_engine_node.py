@@ -6,13 +6,10 @@ import cv2
 from ultralytics import YOLO
 from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 import os
-import threading
-import queue
 
-pt_path='weights/yolov8n.pt'
-engine_path='weights/yolov8n.engine'
+engine_path='../weights/yolov8n.engine'
 
-class YoloTestNode(Node):
+class YoloEngineNode(Node):
     def __init__(self):
         super().__init__('yolo_engine_node')
 
@@ -51,7 +48,7 @@ class YoloTestNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    yolo_test_node=YoloTestNode()
+    yolo_test_node=YoloEngineNode()
     rclpy.spin(yolo_test_node)
     yolo_test_node.destroy_node()
     rclpy.shutdown()

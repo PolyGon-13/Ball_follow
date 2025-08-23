@@ -24,8 +24,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'yolov8_test = yolo_project_package.yolov8_test:main',
-            'yolov8_engine_test=yolo_project_package.yolov8_engine_test:main',
+            'yolo_node = yolo_project_package.yolo_node:main',
+            'yolo_engine_node=yolo_project_package.yolo_engine_node:main',
+            'yolo_test_node=yolo_project_package.yolo_test_node:main',
         ],
     },
 )

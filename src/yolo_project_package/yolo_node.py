@@ -5,10 +5,11 @@ from cv_bridge import CvBridge # ROS 이미지 메시지와 OpenCV 이미지 사
 import cv2
 from ultralytics import YOLO
 from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
+import os
 
-pt_path='weights/yolov8n.pt'
+pt_path='../weights/yolov8n.pt'
 
-class YoloTestNode(Node):
+class YoloNode(Node):
     def __init__(self):
         super().__init__('yolo_pt_node')
 
@@ -47,7 +48,7 @@ class YoloTestNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    yolo_test_node=YoloTestNode()
+    yolo_test_node=YoloNode()
     rclpy.spin(yolo_test_node)
     yolo_test_node.destroy_node()
     rclpy.shutdown()
