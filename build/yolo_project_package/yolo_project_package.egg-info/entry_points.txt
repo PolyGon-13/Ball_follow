@@ -1,0 +1,4 @@
+[console_scripts]
+yolov8_engine_test = yolo_project_package.yolov8_engine_test:main
+yolov8_test = yolo_project_package.yolov8_test:main
+
