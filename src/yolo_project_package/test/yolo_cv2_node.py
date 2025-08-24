@@ -8,12 +8,15 @@ from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 import os
 from vision_msgs.msg import Detection2DArray,Detection2D,BoundingBox2D,ObjectHypothesisWithPose
 
+# BoundingBox2D : 2차원 이미지에서 검출된 사각형 영역을 정의하는 메시지
+# ObjectHypothesisWithPose : 검출된 객체의 클래스와 신뢰도, 필요시 위치를 담는 메시지
+
 pt_path='weights/yolov8n.pt'
 engine_path='weights/yolov8n.engine'
 
 class YoloTestNode(Node):
     def __init__(self):
-        super().__init__('yolo_test_node')
+        super().__init__('yolo_cv2_node')
 
         if not os.path.exists(engine_path):
             model_builder=YOLO(pt_path)
@@ -39,9 +42,16 @@ class YoloTestNode(Node):
             detections_msg=Detection2DArray()
             detections_msg.header=msg.header
             for box in results[0].boxes:
+                # boxes가 가진 정보
+                # xyxy : 왼쪽 위, 오른쪽 아래 좌표
+                # xywh : 중심좌표(x,y), width, height
+                # xywhn : 중심좌표, width, height를 정규환된 값(0~1)으로
+                # cls : 클래스 ID
+                # conf : 신뢰도
                 detection=Detection2D()
                 x_center,y_center,width,height=box.xywhn[0]
 
+                # yolo 결과를 ROS 메시지 형식으로 변환
                 bbox=BoundingBox2D()
                 bbox.center.position.x=float(x_center)
                 bbox.center.position.y=float(y_center)

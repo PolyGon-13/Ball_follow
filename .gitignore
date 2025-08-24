@@ -1,5 +1,7 @@
+# 빌드 파일
 build/
 install/
 log/
 
+# 모델 파일
 weights/
