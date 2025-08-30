@@ -18,5 +18,12 @@ def generate_launch_description():
                     'depth_height': 480,
                     'depth_fps': 30.0,
                 }]
+            ),
+
+            Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name='camera_to_robot_publisher',
+                arguments=['0.05','0','0.1','0','0','0','base_link','camera_link']
             )
     ])
