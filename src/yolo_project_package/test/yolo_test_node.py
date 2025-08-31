@@ -1,17 +1,16 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge # ROS 이미지 메시지와 OpenCV 이미지 사이의 변환을 도와줌
-import cv2
 from ultralytics import YOLO
-from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
-import os
+import cv2
 
 pt_path='../weights/yolov8n.pt'
 
 class YoloNode(Node):
     def __init__(self):
-        super().__init__('yolo_pt_node')
+        super().__init__('yolo_test_node')
 
         self.model=YOLO(pt_path)
         
@@ -24,7 +23,6 @@ class YoloNode(Node):
         )
 
         self.subscription=self.create_subscription(Image,'/camera/camera/color/image_raw',self.image_callback,10)
-
         self.publisher=self.create_publisher(Image,'/yolo/annotated_image',10)
 
     def image_callback(self,msg):

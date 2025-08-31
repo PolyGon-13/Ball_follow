@@ -33,14 +33,14 @@ class YoloTestNode(Node):
     def image_callback(self,msg):
         try:
             cv_image=self.bridge.imgmsg_to_cv2(msg,'bgr8')
-            results=self.model(cv_image,verbose=False)
+            results=self.model(cv_image,verbose=False,conf=0.20) # conf=0.20은 20% 이상의 확신을 가지는 객체만 결과에 포함시키라는 의미
 
             annotated_frame=results[0].plot()
             cv2.imshow("YOLO_Realsense_ROS",annotated_frame)
             cv2.waitKey(1)
 
-            detections_msg=Detection2DArray()
-            detections_msg.header=msg.header
+            detections_msg=Detection2DArray() # 탐지된 객체들의 정보를 담을 메시지 타입
+            detections_msg.header=msg.header # 헤더 정보(타임스탬프, 좌표계 이름 등)
             for box in results[0].boxes:
                 # boxes가 가진 정보
                 # xyxy : 왼쪽 위, 오른쪽 아래 좌표
@@ -49,12 +49,14 @@ class YoloTestNode(Node):
                 # cls : 클래스 ID
                 # conf : 신뢰도
                 detection=Detection2D()
-                x_center,y_center,width,height=box.xywhn[0]
+                # 해상도 독립성을 위해 수치가 아닌 비율로 값을 저장
+                x_center,y_center,width,height=box.xywhn[0] # 바운딩 박스의 중심좌표를 정규화된 비율 값으로 가져옴
 
                 # yolo 결과를 ROS 메시지 형식으로 변환
-                bbox=BoundingBox2D()
+                bbox=BoundingBox2D() # 이미지의 가로세로 길이를 100%라고 할 때, 사각형의 중심이 몇 % 지점에 있는지 알려주는 비율 값
                 bbox.center.position.x=float(x_center)
                 bbox.center.position.y=float(y_center)
+                # 사각형의 너비와 높이를 이미지 전체 크기에 대한 비율로 저장
                 bbox.size_x=float(width)
                 bbox.size_y=float(height)
                 detection.bbox=bbox

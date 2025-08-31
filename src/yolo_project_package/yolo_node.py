@@ -1,12 +1,11 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-import cv2
-from ultralytics import YOLO
 from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
-import os
+from sensor_msgs.msg import Image
 from vision_msgs.msg import Detection2DArray,Detection2D,BoundingBox2D,ObjectHypothesisWithPose
+from ultralytics import YOLO
+from cv_bridge import CvBridge
+import os
 
 pt_path='weights/yolov8n.pt'
 engine_path='weights/yolov8n.engine'
@@ -16,6 +15,7 @@ class YoloDetectionNode(Node):
         super().__init__('yolo_node')
 
         if not os.path.exists(engine_path):
+            self.get_logger().info(f'TensorRT engine not found. Creating a new one from {pt_path}')
             model_builder=YOLO(pt_path)
             model_builder.export(format='engine',half=True,imgsz=640,device=0)
             
@@ -27,28 +27,24 @@ class YoloDetectionNode(Node):
         self.subscription=self.create_subscription(Image,'/camera/camera/color/image_raw',self.image_callback,qos_profile)
         self.detection_publisher=self.create_publisher(Detection2DArray,'/yolo/detections',qos_profile)
 
+        self.get_logger().info('yolo_node has been started.')
+
     def image_callback(self,msg):
         try:
             cv_image=self.bridge.imgmsg_to_cv2(msg,'bgr8')
-            results=self.model(cv_image,verbose=False,conf=0.20)
+            results=self.model(cv_image,verbose=False,conf=0.20) 
 
-            #annotated_frame=results[0].plot()
-            #cv2.imshow("YOLO_Realsense_ROS",annotated_frame)
-            #cv2.waitKey(1)
-
-            detections_msg=Detection2DArray()
-            detections_msg.header=msg.header
+            detections_msg=Detection2DArray() 
+            detections_msg.header=msg.header 
             for box in results[0].boxes:
                 if int(box.cls)==49:
                     detection=Detection2D()
                     x_center,y_center,width,height=box.xywhn[0]
 
-                    # 해상도 독립성을 위해 수치가 아닌 비율로 값을 저장
                     bbox=BoundingBox2D()
-                    # 이미지의 가로세로 길이를 100%라고 할 때, 사각형의 중심이 몇 % 지점에 있는지 알려주는 비율 값
+                    
                     bbox.center.position.x=float(x_center)
                     bbox.center.position.y=float(y_center)
-                    # 사각형의 너비와 높이를 이미지 전체 크기에 대한 비율로 저장
                     bbox.size_x=float(width)
                     bbox.size_y=float(height)
                     detection.bbox=bbox
@@ -61,6 +57,7 @@ class YoloDetectionNode(Node):
                     detections_msg.detections.append(detection)
 
             self.detection_publisher.publish(detections_msg)
+
         except Exception as e:
             self.get_logger().error(f'Error in image_callback: {e}')
 
@@ -75,7 +72,6 @@ def main(args=None):
     finally:
         yolo_node.destroy_node()
         rclpy.shutdown()
-        #cv2.destroyAllWindows()
 
 if __name__=='__main__':
     main()

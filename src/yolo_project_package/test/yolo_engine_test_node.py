@@ -1,24 +1,22 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-import cv2
 from ultralytics import YOLO
-from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
-import os
+import cv2
 
 engine_path='../weights/yolov8n.engine'
 
 class YoloEngineNode(Node):
     def __init__(self):
-        super().__init__('yolo_engine_node')
+        super().__init__('yolo_engine_test_node')
 
         if not os.path.exists(engine_path):
             temp_model=YOLO(pt_path)
             temp_model.export(format='engine',half=True,imgsz=640,device=0)
 
         self.model=YOLO(engine_path,task='detect')
-        
         self.bridge=CvBridge()
 
         qos_profile=QoSProfile(
@@ -28,7 +26,6 @@ class YoloEngineNode(Node):
         )
 
         self.subscription=self.create_subscription(Image,'/camera/camera/color/image_raw',self.image_callback,qos_profile)
-
         self.publisher=self.create_publisher(Image,'/yolo/annotated_image',10)
 
     def image_callback(self,msg):
