@@ -13,7 +13,7 @@ engine_path='weights/yolov8n.engine'
 
 class YoloDetectionNode(Node):
     def __init__(self):
-        super().__init__('yolo_detect_node')
+        super().__init__('yolo_node')
 
         if not os.path.exists(engine_path):
             model_builder=YOLO(pt_path)

@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'yolo_node=yolo_project_package.yolo_node:main',
-            'vel_cal_node=yolo_project_package.vel_cal_node:main',
+            'vel_pub_node=yolo_project_package.vel_pub_node:main',
         ],
     },
 )

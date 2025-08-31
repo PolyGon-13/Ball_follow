@@ -8,14 +8,13 @@ from geometry_msgs.msg import Twist,PointStamped
 from cv_bridge import CvBridge
 from rclpy.qos import QoSProfile,QoSReliabilityPolicy,QoSHistoryPolicy
 import cv2
-
 import tf2_ros
 from tf2_ros import Buffer,TransformListener,TransformException
 from tf2_geometry_msgs import do_transform_point
 
 class VelocityEstimatorNode(Node):
     def __init__(self):
-        super().__init__('velocity_estimator_node')
+        super().__init__('vel_pub_node')
         self.bridge=CvBridge()
 
         self.K_matrix=None
@@ -105,8 +104,8 @@ class VelocityEstimatorNode(Node):
             X_base=point_in_base_frame.point.x
             Y_base=point_in_base_frame.point.y
 
-            linear_p_gain,linear_i_gain,linear_d_gain=0.6,0.0,0.7 # Kp, Ki, Kd
-            angular_p_gain,angular_i_gain,angular_d_gain=0.7,0.0,0.7
+            linear_p_gain,linear_i_gain,linear_d_gain=0.6,0.0,0.1 # Kp, Ki, Kd
+            angular_p_gain,angular_i_gain,angular_d_gain=0.7,0.0,0.2
             target_distance=0.3 # 로봇과 공의 목표거리
             linear_dead_zone,angular_dead_zone=0.05,0.03
 
